@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: wb_reviews_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reviews_db}
+      POSTGRES_USER: ${POSTGRES_USER:-reviews_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reviews_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Данные PostgreSQL будут лежать здесь и не пропадут после перезапуска контейнера.
+      - ./storage/postgres_data:/var/lib/postgresql/data
+      # SQL-схема создастся при первом запуске пустой БД.
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reviews_user} -d ${POSTGRES_DB:-reviews_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  db_tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.db_tools
+    container_name: wb_reviews_db_tools
+    env_file:
+      - .env
+    environment:
+      # Внутри docker-сети PostgreSQL доступен не через localhost, а через имя сервиса postgres
+      DATABASE_URL: postgresql://reviews_user:reviews_password@postgres:5432/reviews_db
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+
+      # Внутри docker-сети Qdrant доступен через имя сервиса qdrant
+      QDRANT_URL: http://qdrant:6333
+
+      HF_HOME: /app/storage/huggingface_cache
+      TRANSFORMERS_CACHE: /app/storage/huggingface_cache
+      SENTENCE_TRANSFORMERS_HOME: /app/storage/huggingface_cache
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    profiles:
+      - tools
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.5
+    container_name: wb_reviews_qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      # Данные Qdrant будут лежать здесь и не пропадут после перезапуска контейнера.
+      - ./storage/qdrant_storage:/qdrant/storage
+    # healthcheck:
+    #   test: ["CMD", "bash", "-c", "curl -f http://localhost:6333/readyz || exit 1"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 20

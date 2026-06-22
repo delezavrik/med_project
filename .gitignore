@@ -1,0 +1,63 @@
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+*.env
+!.env.example
+!.env.*.example
+
+# Data folders: keep folders, ignore files
+data/**
+!data/**/
+!data/**/.gitkeep
+
+storage/**
+!storage/**/
+!storage/**/.gitkeep
+
+service/storage/**
+!service/storage/**/
+!service/storage/**/.gitkeep
+
+# Large data/model artifacts
+*.csv
+*.parquet
+*.jsonl
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+*.pt
+*.pth
+*.bin
+*.onnx
+*.faiss
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.gz
+*.7z
+*.rar
+
+# Logs
+*.log
+logs/

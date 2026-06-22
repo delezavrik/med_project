@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: ./backend
+    container_name: reviews_service_api
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - qdrant
+
+  postgres:
+    image: postgres:16
+    container_name: reviews_service_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reviews_db
+      POSTGRES_USER: reviews_user
+      POSTGRES_PASSWORD: reviews_password
+    ports:
+      # 5432 на Mac часто уже занят старым PostgreSQL, поэтому наружу отдаем 5433.
+      # Внутри Docker-сети backend все равно ходит на postgres:5432.
+      - "5433:5432"
+    volumes:
+      - reviews_postgres_data:/var/lib/postgresql/data
+      - ./backend/sql/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: reviews_service_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - reviews_qdrant_data:/qdrant/storage
+
+volumes:
+  reviews_postgres_data:
+  reviews_qdrant_data:

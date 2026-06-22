@@ -1,0 +1,8 @@
+pandas==2.2.2
+pyarrow==17.0.0
+numpy==2.0.2
+psycopg2-binary==2.9.10
+qdrant-client==1.12.1
+python-dotenv==1.0.1
+tqdm==4.66.5
+sentence-transformers==3.2.1
