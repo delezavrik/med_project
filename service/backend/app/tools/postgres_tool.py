@@ -101,10 +101,7 @@ class PostgresTool:
             review_id=row.get("review_id"),
             text=row.get("text", ""),
             labels=list(labels),
-            product_id=row.get("product_id"),
             product_name=row.get("product_name"),
-            category=row.get("category"),
-            brand=row.get("brand"),
             rating=row.get("rating"),
             date=row.get("date") or row.get("review_date"),
         )
