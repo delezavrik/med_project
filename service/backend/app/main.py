@@ -1,12 +1,31 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router as api_router
 from app.core.config import get_settings
+from app.core.db import create_pool, get_pool, set_pool
 
 settings = get_settings()
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    pool = create_pool(settings)
+    if pool is not None:
+        pool.open(wait=True)
+    set_pool(pool)
+    try:
+        yield
+    finally:
+        current = get_pool()
+        set_pool(None)
+        if current is not None:
+            current.close()
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
