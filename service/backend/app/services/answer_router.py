@@ -18,6 +18,8 @@ class AnswerRouter:
             answer_mode=query.answer_mode,
             answer_text=answer_text,
             ui_blocks=self._build_ui_blocks(result),
+            trace_steps=list(result.raw.get("trace_steps", []) or []),
+            execution_ms=None,
         )
 
     def _build_template_answer(self, result: StructuredResult) -> str:
