@@ -98,6 +98,11 @@ class AnswerResponse(BaseModel):
     answer_mode: AnswerMode
     answer_text: str
     ui_blocks: list[dict[str, Any]] = Field(default_factory=list)
+    # Фронт объявляет trace_steps как required — без поля здесь фронт получит undefined
+    # и упадёт с TypeError в ResultView (белый экран). AnswerRouter кладёт сюда
+    # значение из result.raw["trace_steps"].
+    trace_steps: list[dict[str, Any]] = Field(default_factory=list)
+    execution_ms: float | None = None
 
 
 class TemplateExecuteRequest(BaseModel):

@@ -1,23 +1,36 @@
-# Frontend integration layer
+# frontend — UI для проверки аналитики отзывов
 
-Это не полноценный React-проект, а заготовки, которые можно перенести в сайт.
+Это полноценный Vite/React-интерфейс для MVP-сервиса.
 
-Что здесь есть:
+## Запуск
 
-```text
-src/api/types.ts              # типы ParsedQuery / AnswerResponse
-src/api/client.ts             # функции вызова backend
-src/config/templates.ts       # конфиг шаблонов для UI
-src/components/QuickAnalyticsForm.tsx
-src/pages/QuickAnalyticsPage.tsx
-src/pages/ChatAnalyticsPage.tsx
+Frontend запускается через общий Docker Compose из папки `service/`.
+
+```bash
+cd service
+cp backend/.env.docker.example backend/.env
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-Идея для сайта:
+Frontend откроется на:
 
 ```text
-/analytics/quick   # шаблонная аналитика
-/analytics/chat    # чат с LLM
+http://localhost:5173
 ```
 
-Обе страницы отправляют запросы в один backend и получают единый `AnswerResponse`.
+Vite проксирует `/api/*` в backend.
+
+Проверить production-сборку frontend без локального Node можно так:
+
+```bash
+docker compose -f docker-compose.dev.yml build frontend-build
+```
+
+## Что есть в UI
+
+- вкладка `Сценарии` для всех PostgreSQL-шаблонов;
+- вкладка `Чат` для `/api/v1/chat/ask`;
+- фильтры по периоду, категории, бренду, товару и рейтингу;
+- отдельный режим выбора подмножества проблем для сценариев вроде `top_problems`;
+- таблицы, метрики, предупреждения и примеры отзывов без raw JSON на первом экране;
+- details-блок с `ParsedQuery` и raw-данными для отладки.
