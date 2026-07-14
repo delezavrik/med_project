@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException
-import psycopg
-from psycopg.rows import dict_row
 
 from app.core.config import get_settings
+from app.core.db import get_pool
 from app.schemas.query import AnswerResponse, ChatAskRequest, ParsedQuery, TemplateExecuteRequest
 from app.services.query_service import QueryService
 from app.services.template_registry import list_templates
@@ -38,11 +37,12 @@ def ask_chat(request: ChatAskRequest) -> AnswerResponse:
 def db_stats() -> dict:
     """Быстрая проверка, что backend видит PostgreSQL и что данные импортированы."""
     settings = get_settings()
-    if not settings.postgres_dsn:
+    pool = get_pool()
+    if pool is None or not settings.postgres_dsn:
         raise HTTPException(status_code=500, detail="POSTGRES_DSN не задан")
 
     try:
-        with psycopg.connect(settings.postgres_dsn, row_factory=dict_row) as conn:
+        with pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT COUNT(*) AS reviews_count FROM reviews;")
                 reviews_count = cur.fetchone()["reviews_count"]
