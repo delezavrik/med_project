@@ -13,10 +13,10 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     pool = create_pool(settings)
-    if pool is not None:
-        pool.open(wait=True)
     set_pool(pool)
     try:
+        if pool is not None:
+            pool.open(wait=True, timeout=settings.postgres_pool_timeout)
         yield
     finally:
         current = get_pool()
