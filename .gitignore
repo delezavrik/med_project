@@ -61,3 +61,12 @@ service/storage/**
 # Logs
 *.log
 logs/
+
+# Personal / local-only
+.claude/
+.superpowers/
+archive/
+service/docker-compose.override.yml
+service/frontend/node_modules/
+service/frontend/dist/
+service/frontend/tsconfig.tsbuildinfo
