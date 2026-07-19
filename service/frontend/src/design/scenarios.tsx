@@ -15,7 +15,7 @@ const SCENARIOS: Scenario[] = [
   { key: "top",      title: "Топ проблем и доли",     sub: "самые частые проблемы за период",   tag: "обзор",     message: "Покажи топ проблем в отзывах",                    preview: <PreviewBars keys={["size", "quality", "pack", "card"]} /> },
   { key: "growth",   title: "Что выросло сейчас",      sub: "резкий рост к прошлому периоду",     tag: "алерт",     message: "Что сильнее всего выросло и почему? Объясни по отзывам", preview: <PreviewLine keyName="pack" /> },
   { key: "dynamics", title: "Динамика негатива",       sub: "как менялась доля проблем по неделям", tag: "тренд",   message: "Покажи динамику проблем по неделям",              preview: <PreviewLine keyName="__neg" /> },
-  { key: "compare",  title: "Сравнение периодов",      sub: "этот период против прошлого",        tag: "сравнение", message: "Сравни этот период с прошлым по проблемам",       preview: <PreviewBars keys={["pack", "return", "quality", "size"]} signed /> },
+  { key: "rag",      title: "Похожие отзывы (RAG)",    sub: "смысловой поиск по векторам bge-m3",  tag: "RAG",       message: "Похожие отзывы про порванную упаковку и повреждённую коробку", preview: <PreviewDots /> },
   { key: "products", title: "Топ товаров по проблеме", sub: "где проблема встречается чаще",       tag: "риск",      message: "Топ товаров с проблемой качества",                preview: <PreviewBars keys={["size", "quality", "pack", "return"]} /> },
   { key: "quality",  title: "Разбор качества",         sub: "почему жалуются на брак/дефект",      tag: "разбор",    message: "Почему жалуются на качество товара? Разбери по отзывам", preview: <PreviewDots /> },
 ];

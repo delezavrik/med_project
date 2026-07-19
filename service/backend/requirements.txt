@@ -8,3 +8,8 @@ openai>=1.99.0
 python-dotenv==1.0.1
 psycopg2-binary==2.9.9
 pytest==8.0.1
+# RAG: эмбеддер запросов bge-m3 (совпадает с векторами в Qdrant).
+# torch: >=2.6 требует transformers (CVE-guard для torch.load bge-m3), но <2.13,
+# иначе на linux/aarch64 тянется бесполезный CUDA-стек (~ГБ). 2.7.1 — CPU-only.
+torch==2.7.1
+sentence-transformers==3.2.1

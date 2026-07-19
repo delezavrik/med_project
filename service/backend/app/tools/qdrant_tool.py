@@ -1,7 +1,7 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, FieldCondition, MatchAny, MatchValue, Range
 
 from app.core.config import get_settings
+from app.domain.labels import KNOWN_LABELS
 from app.schemas.query import ParsedQuery, ReviewExample, StructuredResult
 
 
@@ -29,12 +29,11 @@ class QdrantTool:
         try:
             client = QdrantClient(url=self.settings.qdrant_url, api_key=self.settings.qdrant_api_key or None)
             vector = self._embed(query.semantic_query)
-            qdrant_filter = self._build_filter(query)
-
+            # Чистый семантический поиск без payload-фильтра: поля payload не
+            # проиндексированы под фильтрацию, а смысловой запрос сам таргетирует релевантные отзывы.
             hits = client.search(
                 collection_name=self.settings.qdrant_collection,
                 query_vector=vector,
-                query_filter=qdrant_filter,
                 limit=query.limit,
                 with_payload=True,
             )
@@ -44,48 +43,38 @@ class QdrantTool:
 
         for hit in hits:
             payload = hit.payload or {}
+            labels = payload.get("predicted_labels") or payload.get("labels") or []
+            if isinstance(labels, str):
+                labels = [labels]
+            labels = [label for label in labels if label in KNOWN_LABELS]
+
+            rating = payload.get("rating")
+            if not isinstance(rating, int) or not (1 <= rating <= 5):
+                rating = None
+
             result.examples.append(
                 ReviewExample(
                     review_id=str(payload.get("review_id") or hit.id),
-                    text=str(payload.get("text") or ""),
-                    labels=list(payload.get("labels") or []),
+                    text=str(payload.get("review_text") or payload.get("text") or ""),
+                    labels=list(labels),
                     product_name=payload.get("product_name"),
-                    rating=payload.get("rating"),
-                    date=str(payload.get("review_date")) if payload.get("review_date") else None,
+                    rating=rating,
+                    date=str(payload.get("review_date"))[:10] if payload.get("review_date") else None,
                     score=float(hit.score) if hit.score is not None else None,
                 )
             )
 
+        result.raw["trace_steps"] = [
+            {"id": "embed", "title": "Векторизовал запрос (BGE-M3)", "status": "ok", "duration_ms": None,
+             "input": {"semantic_query": query.semantic_query}, "output": {"dim": len(vector)}},
+            {"id": "qdrant", "title": "Семантический поиск в Qdrant", "status": "ok", "duration_ms": None,
+             "input": {"limit": query.limit}, "output": {"found": len(result.examples)}},
+        ]
         return result
 
     def _embed(self, text: str) -> list[float]:
-        """Временная точка расширения.
+        """Эмбеддинг запроса через тёплый bge-m3 (размерность 1024, как в Qdrant)."""
+        from app.tools.embedder import embed
 
-        Заменить на реальный encoder, например bge-m3.
-        Важно: размерность должна совпадать с collection в Qdrant.
-        """
-        raise NotImplementedError("Подключи embedding-модель в QdrantTool._embed().")
+        return embed(text)
 
-    def _build_filter(self, query: ParsedQuery) -> Filter | None:
-        conditions = []
-        f = query.filters
-
-        if f.labels:
-            conditions.append(FieldCondition(key="labels", match=MatchAny(any=f.labels)))
-        if f.category:
-            conditions.append(FieldCondition(key="category", match=MatchValue(value=f.category)))
-        if f.brand:
-            conditions.append(FieldCondition(key="brand", match=MatchValue(value=f.brand)))
-        if f.product_id:
-            conditions.append(FieldCondition(key="product_id", match=MatchValue(value=f.product_id)))
-        if f.min_rating is not None or f.max_rating is not None:
-            conditions.append(
-                FieldCondition(
-                    key="rating",
-                    range=Range(gte=f.min_rating, lte=f.max_rating),
-                )
-            )
-
-        if not conditions:
-            return None
-        return Filter(must=conditions)

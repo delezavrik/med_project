@@ -99,13 +99,18 @@ class LLMChatParser:
 
         limit = 6 if intent.value in _EXAMPLE_INTENTS else 20
 
+        # семантический поиск «похожих отзывов» → Qdrant (RAG); иначе Postgres
+        semantic = data.get("semantic_query") or None
+        use_rag = bool(semantic) and intent == Intent.REVIEW_EXAMPLES
+        tools = [ToolName.QDRANT] if use_rag else [ToolName.POSTGRES]
+
         return ParsedQuery(
             source=QuerySource.CHAT,
             intent=intent,
             filters=filters,
             group_by=group_by,
-            semantic_query=data.get("semantic_query") or None,
-            tools=[ToolName.POSTGRES],
+            semantic_query=semantic,
+            tools=tools,
             answer_mode=answer_mode,
             limit=limit,
         )

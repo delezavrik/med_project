@@ -7,7 +7,7 @@ import { AnswerView } from "./answerview";
 const CHAT_EXAMPLES = [
   "Почему выросли жалобы на упаковку?",
   "Топ проблем в отзывах",
-  "Покажи отзывы про размер и посадку",
+  "Похожие отзывы про порванную упаковку и вмятину на коробке",
 ];
 
 interface Msg { id: number; role: "user" | "bot"; text?: string; greeting?: boolean; resp?: AnswerResponse; loading?: boolean; error?: string; }

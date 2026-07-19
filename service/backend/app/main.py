@@ -17,6 +17,12 @@ async def lifespan(app: FastAPI):
     try:
         if pool is not None:
             pool.open(wait=True, timeout=settings.postgres_pool_timeout)
+        # Прогрев эмбеддера bge-m3 в фоне — не блокируем старт/healthcheck.
+        import threading
+
+        from app.tools.embedder import warmup
+
+        threading.Thread(target=warmup, daemon=True).start()
         yield
     finally:
         current = get_pool()
