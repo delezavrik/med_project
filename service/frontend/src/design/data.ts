@@ -120,3 +120,10 @@ export function cssv(v: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 }
 export const col = (key: ClassKey) => cssv(CMAP[key].cvar);
+
+// имена меток (как в БД) → ключ/короткое имя/цвет
+export const KEY_BY_NAME: Record<string, ClassKey> = Object.fromEntries(
+  CLASSES.map((c) => [c.name, c.key]),
+) as Record<string, ClassKey>;
+export const shortByName = (name: string) => (KEY_BY_NAME[name] ? CMAP[KEY_BY_NAME[name]].short : name);
+export const colByName = (name: string) => (KEY_BY_NAME[name] ? col(KEY_BY_NAME[name]) : cssv("--ink-3"));

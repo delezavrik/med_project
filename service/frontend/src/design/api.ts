@@ -63,3 +63,38 @@ export async function fetchDashboard(granularity: Granularity): Promise<Dashboar
   if (!res.ok) throw new Error(`API ${res.status}`);
   return (await res.json()) as DashboardData;
 }
+
+// ---------- чат / drill-down (реальный /chat/ask) ----------
+export interface QueryCtx {
+  intent?: string;
+  label?: ClassKey;
+  product?: string;
+  deltaPct?: number | null;
+  share?: number;
+  count?: number;
+}
+
+export interface AResMetric { name: string; value: number | string | null; unit: string | null; }
+export interface AResReview {
+  review_id: string | null; text: string; labels: string[];
+  product_name: string | null; rating: number | null; date: string | null; score: number | null;
+}
+export interface ATrace { id: string; title: string; status: string; input: Record<string, unknown>; output: Record<string, unknown>; }
+export interface AnswerResponse {
+  parsed_query: { intent: string; filters: { labels: string[] } };
+  answer_mode: string;
+  answer_text: string;
+  result: { metrics: AResMetric[]; rows: { data: Record<string, unknown> }[]; examples: AResReview[]; warnings: string[] };
+  trace_steps: ATrace[];
+  execution_ms: number | null;
+}
+
+export async function askChat(message: string, forceMode?: "llm" | "template"): Promise<AnswerResponse> {
+  const res = await fetch(`${API_BASE}/chat/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, force_answer_mode: forceMode ?? null }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return (await res.json()) as AnswerResponse;
+}

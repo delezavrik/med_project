@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CMAP, col, cssv, fmt, pct, type ClassKey } from "./data";
-import { fetchDashboard, type DashboardData, type Granularity } from "./api";
+import { fetchDashboard, type DashboardData, type Granularity, type QueryCtx } from "./api";
 import { Sparkline, TopProblemsChart, DynamicsChart, PositiveVsProblem } from "./charts";
-import type { QueryCtx } from "./answers";
 
 interface DashProps {
   gran: Granularity;
@@ -113,7 +112,7 @@ function AlertsCard({ data, onDrill }: { data: DashboardData; onDrill: (text: st
           {rows.map((c) => (
             <div
               key={c.label_key} className="alert-row" tabIndex={0}
-              onClick={() => onDrill(`Рост «${c.short}» ${c.delta_pct !== null ? (c.delta_pct > 0 ? "+" : "") + c.delta_pct + "%" : ""}`, { intent: "problem_growth_analysis", label: c.label_key })}
+              onClick={() => onDrill(`Рост «${c.short}» ${c.delta_pct !== null ? (c.delta_pct > 0 ? "+" : "") + c.delta_pct + "%" : ""}`, { intent: "problem_growth_analysis", label: c.label_key, share: c.share, deltaPct: c.delta_pct, count: c.count })}
               onKeyDown={(e) => { if (e.key === "Enter") onDrill(`Рост «${c.short}»`, { intent: "problem_growth_analysis", label: c.label_key }); }}
             >
               <div className="an"><span className="sw" style={{ background: col(c.label_key) }} />{c.short}</div>
@@ -278,7 +277,7 @@ export function DashboardView({ gran, onDrill, onChatSeed, onChatAsk }: DashProp
             <div className="tools"><span className="fact-tag">● Факт из БД</span></div>
           </div>
           <div className="card-b">
-            <TopProblemsChart positive={data.positive} problems={data.problems} onDrill={(k) => onDrill(`Проблема «${CMAP[k]?.short ?? k}»`, { intent: "review_examples", label: k })} />
+            <TopProblemsChart positive={data.positive} problems={data.problems} onDrill={(k) => { const p = data.problems.find((x) => x.label_key === k); onDrill(`Проблема «${p?.short ?? CMAP[k]?.short ?? k}»`, { intent: "review_examples", label: k, share: p?.share, deltaPct: p?.delta_pct, count: p?.count }); }} />
           </div>
         </section>
         <AlertsCard data={data} onDrill={onDrill} />

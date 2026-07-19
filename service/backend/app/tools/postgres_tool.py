@@ -12,6 +12,13 @@ DATE_DEPENDENT_INTENTS = {
     Intent.PROBLEM_GROWTH_ANALYSIS,
 }
 
+EXAMPLE_INTENTS = {
+    Intent.REVIEW_EXAMPLES,
+    Intent.PRODUCT_SUMMARY,
+    Intent.PROBLEM_GROWTH_ANALYSIS,
+    Intent.RECOMMENDATIONS,
+}
+
 
 class PostgresTool:
     """Инструмент для точных PostgreSQL-агрегатов по отзывам."""
@@ -46,15 +53,28 @@ class PostgresTool:
             result.warnings.append(f"Ошибка PostgreSQL-инструмента: {exc}")
             return result
 
-        result.rows = [ResultRow(data=row) for row in rows]
-
-        if query.intent in {Intent.REVIEW_EXAMPLES}:
+        if query.intent in EXAMPLE_INTENTS:
             result.examples = [self._row_to_review_example(row) for row in rows]
+            result.rows = []
+        else:
+            result.rows = [ResultRow(data=row) for row in rows]
 
         if len(rows) == 1 and "review_count" in rows[0]:
             result.metrics.append(MetricBlock(name="review_count", value=rows[0]["review_count"], unit="reviews"))
 
         self._add_coverage_info(query, result, pool)
+
+        result.raw["trace_steps"] = [
+            {
+                "id": "filter", "title": "Отобрал отзывы по фильтрам", "status": "ok", "duration_ms": None,
+                "input": query.filters.model_dump(exclude_none=True), "output": {},
+            },
+            {
+                "id": "query", "title": f"Выполнил запрос: {query.intent.value}", "status": "ok", "duration_ms": None,
+                "input": {"intent": query.intent.value, "group_by": query.group_by.value if query.group_by else None},
+                "output": {"rows": len(rows), "examples": len(result.examples)},
+            },
+        ]
         return result
 
     def _prepare_query_for_available_dates(self, query: ParsedQuery, result: StructuredResult, pool) -> ParsedQuery:
@@ -97,12 +117,16 @@ class PostgresTool:
         if isinstance(labels, str):
             labels = [labels]
 
+        rating = row.get("rating")
+        if not isinstance(rating, int) or not (1 <= rating <= 5):
+            rating = None
+
         return ReviewExample(
-            review_id=row.get("review_id"),
+            review_id=str(row["review_id"]) if row.get("review_id") is not None else None,
             text=row.get("text", ""),
             labels=list(labels),
             product_name=row.get("product_name"),
-            rating=row.get("rating"),
+            rating=rating,
             date=row.get("date") or row.get("review_date"),
         )
 

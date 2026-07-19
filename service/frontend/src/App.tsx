@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CMAP } from "./design/data";
-import type { QueryCtx } from "./design/answers";
+import type { QueryCtx } from "./design/api";
 import { DashboardView } from "./design/dashboard";
 import { ChatView, type ChatHandle } from "./design/chat";
 import { ScenariosView } from "./design/scenarios";
@@ -18,12 +18,17 @@ const TITLES: Record<View, [string, string]> = {
 
 function derive(ctx: QueryCtx): { q: string; ctxLabel: string } {
   const c = ctx.label ? CMAP[ctx.label] : null;
+  const short = c?.short ?? "проблема";
+  const bits: string[] = [];
+  if (ctx.share != null) bits.push(`${(ctx.share * 100).toFixed(1).replace(".", ",")}% отзывов`);
+  if (ctx.deltaPct != null) bits.push(`${ctx.deltaPct > 0 ? "+" : ""}${ctx.deltaPct}% к прошлому периоду`);
+  const facts = bits.length ? ` (${bits.join(", ")})` : "";
   if (ctx.intent === "problem_growth_analysis" && c)
-    return { q: `Почему выросли жалобы «${c.short}» (${c.delta > 0 ? "+" : ""}${c.delta}%)?`, ctxLabel: `Контекст: рост «${c.short}»` };
+    return { q: `Почему выросли жалобы «${short}»${facts}? Разбери по реальным отзывам и объясни продавцу.`, ctxLabel: `рост «${short}»` };
   if (ctx.intent === "review_examples" && c)
-    return { q: `Покажи отзывы с проблемой «${c.short}» и объясни суть`, ctxLabel: `Контекст: «${c.short}»` };
-  if (ctx.product) return { q: `Какие главные проблемы у товара «${ctx.product}»?`, ctxLabel: `Контекст: ${ctx.product}` };
-  return { q: "Расскажи подробнее", ctxLabel: "Контекст с дашборда" };
+    return { q: `Покажи отзывы с проблемой «${short}»${facts} и объясни суть.`, ctxLabel: `«${short}»` };
+  if (ctx.product) return { q: `Какие главные проблемы у товара «${ctx.product}»? Объясни по отзывам.`, ctxLabel: ctx.product };
+  return { q: "Расскажи подробнее по отзывам.", ctxLabel: "контекст с дашборда" };
 }
 
 export function App() {
@@ -57,21 +62,21 @@ export function App() {
     if (!drill) return;
     const { q, ctxLabel } = derive(drill.ctx);
     setView("chat");
-    chatRef.current?.fill(q, ctxLabel, drill.ctx);
+    chatRef.current?.fill(q, ctxLabel);
     setDrill(null);
   }
   function chatSeed(ctx: QueryCtx) {
     const { q, ctxLabel } = derive(ctx);
     setView("chat");
-    chatRef.current?.fill(q, ctxLabel, ctx);
+    chatRef.current?.fill(q, ctxLabel);
   }
-  function chatAsk(q: string, ctx?: QueryCtx) {
+  function chatAsk(q: string) {
     setView("chat");
-    chatRef.current?.send(q, ctx);
+    chatRef.current?.send(q);
   }
-  function scenOpenChat(q?: string, ctx?: QueryCtx) {
+  function scenOpenChat(q?: string) {
     setView("chat");
-    if (q) chatRef.current?.send(q, ctx);
+    if (q) chatRef.current?.send(q);
   }
 
   const themeLbl = { auto: "Авто", light: "Светлая", dark: "Тёмная" }[themeMode];

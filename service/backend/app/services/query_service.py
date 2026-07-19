@@ -1,6 +1,6 @@
 from app.schemas.query import AnswerResponse, ChatAskRequest, ParsedQuery, TemplateExecuteRequest
 from app.services.answer_router import AnswerRouter
-from app.services.chat_parser import ChatParser
+from app.services.llm_chat_parser import LLMChatParser
 from app.services.template_parser import TemplateParser
 from app.services.tool_router import ToolRouter
 
@@ -8,7 +8,7 @@ from app.services.tool_router import ToolRouter
 class QueryService:
     def __init__(self) -> None:
         self.template_parser = TemplateParser()
-        self.chat_parser = ChatParser()
+        self.chat_parser = LLMChatParser()
         self.tool_router = ToolRouter()
         self.answer_router = AnswerRouter()
 

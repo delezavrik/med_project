@@ -1,4 +1,5 @@
 from typing import Any
+from app.domain.labels import KNOWN_LABELS
 from app.schemas.query import GroupBy, Intent, ParsedQuery
 
 
@@ -20,9 +21,40 @@ class SQLBuilder:
             return self._problem_dynamics(where_sql, params, query.group_by or GroupBy.WEEK)
         if query.intent == Intent.TOP_PRODUCTS_BY_PROBLEM:
             return self._top_products(where_sql, params, query.limit)
+        if query.intent in {Intent.REVIEW_EXAMPLES, Intent.PRODUCT_SUMMARY, Intent.PROBLEM_GROWTH_ANALYSIS, Intent.RECOMMENDATIONS}:
+            return self._review_examples(where_sql, params, query.limit)
 
         # Для сложных intent сначала возвращаем базовые агрегаты.
         return self._top_problems(where_sql, params, query.limit)
+
+    def _review_examples(self, where_sql: str, params: dict[str, Any], limit: int) -> tuple[str, dict[str, Any]]:
+        """Реальные отзывы-подтверждения из Postgres (без RAG): текст, рейтинг, товар, метки."""
+        params = {**params, "limit": max(1, min(limit, 20)), "known_labels": KNOWN_LABELS}
+        sql = f"""
+        SELECT
+            r.review_id,
+            r.text,
+            r.rating,
+            r.product_id,
+            r.product_name,
+            r.brand,
+            r.category,
+            r.review_date::text AS date,
+            COALESCE(
+                array_agg(DISTINCT lab.label) FILTER (WHERE lab.label = ANY(%(known_labels)s)),
+                ARRAY[]::text[]
+            ) AS labels
+        FROM reviews r
+        JOIN review_labels rl ON rl.review_id = r.review_id
+        LEFT JOIN review_labels lab ON lab.review_id = r.review_id
+        WHERE {where_sql}
+        GROUP BY r.review_id, r.text, r.rating, r.product_id, r.product_name, r.brand, r.category, r.review_date
+        -- сначала реальные жалобы (низкий рейтинг 1-3), затем содержательные по длине
+        ORDER BY (CASE WHEN r.rating BETWEEN 1 AND 3 THEN r.rating ELSE 9 END) ASC,
+                 length(r.text) DESC
+        LIMIT %(limit)s;
+        """
+        return sql, params
 
     def _build_filters(self, query: ParsedQuery) -> tuple[str, dict[str, Any]]:
         filters = query.filters

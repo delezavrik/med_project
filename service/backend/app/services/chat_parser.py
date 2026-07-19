@@ -13,17 +13,21 @@ class ChatParser:
 
         labels: list[str] = []
         if "достав" in text or "получ" in text:
-            labels.append("Доставка/получение")
-        if "упаков" in text:
-            labels.append("Упаковка")
-        if "брак" in text or "дефект" in text:
-            labels.append("Брак/дефект товара")
-        if "размер" in text or "посад" in text:
-            labels.append("Размер/посадка")
-        if "описан" in text:
-            labels.append("Несоответствие описанию")
+            labels.append("Проблема доставки / получения")
+        if "упаков" in text or "комплект" in text:
+            labels.append("Проблема с комплектацией / упаковкой")
+        if "брак" in text or "дефект" in text or "качеств" in text:
+            labels.append("Проблема с качеством товара")
+        if "размер" in text or "посад" in text or "маломер" in text:
+            labels.append("Проблема с размером / посадкой")
+        if "описан" in text or "карточк" in text or "не соответств" in text:
+            labels.append("Несоответствие карточке товара")
+        if "цен" in text or "дорог" in text:
+            labels.append("Цена / ценность")
+        if "возврат" in text:
+            labels.append("Проблема с возвратом")
 
-        category = "Книги" if "книг" in text else None
+        category = None
 
         if "пример" in text or "похож" in text or "покажи отзывы" in text:
             intent = Intent.REVIEW_EXAMPLES

@@ -1,8 +1,6 @@
-import { useState, type ReactNode } from "react";
-import {
-  AnswerCard, ansTop, ansGrowth, ansDynamics, ansCompare, ansProducts, ansRag,
-  type AnswerSpec, type QueryCtx,
-} from "./answers";
+import { useEffect, useState, type ReactNode } from "react";
+import { askChat, type AnswerResponse } from "./api";
+import { AnswerView } from "./answerview";
 import { PreviewBars, PreviewLine, PreviewDots } from "./charts";
 
 const ICON = (
@@ -11,18 +9,48 @@ const ICON = (
   </svg>
 );
 
-interface Scenario { key: string; title: string; sub: string; tag: string; gen: () => AnswerSpec; preview: ReactNode; }
+interface Scenario { key: string; title: string; sub: string; tag: string; message: string; preview: ReactNode; }
 
 const SCENARIOS: Scenario[] = [
-  { key: "top",      title: "Топ проблем и доли",      sub: "самые частые проблемы за период",   tag: "обзор",     gen: ansTop,      preview: <PreviewBars keys={["size", "quality", "pack", "card"]} /> },
-  { key: "growth",   title: "Что выросло сейчас",       sub: "резкий рост к прошлому периоду",     tag: "алерт",     gen: ansGrowth,   preview: <PreviewLine keyName="pack" /> },
-  { key: "dynamics", title: "Динамика негатива",        sub: "как менялась доля проблем по неделям", tag: "тренд",   gen: ansDynamics, preview: <PreviewLine keyName="__neg" /> },
-  { key: "compare",  title: "Сравнение периодов",       sub: "этот период против прошлого",        tag: "сравнение", gen: ansCompare,  preview: <PreviewBars keys={["pack", "return", "quality", "size"]} signed /> },
-  { key: "products", title: "Топ товаров по проблеме",  sub: "где проблема встречается чаще",       tag: "риск",      gen: ansProducts, preview: <PreviewBars keys={["size", "quality", "pack", "return"]} /> },
-  { key: "rag",      title: "Похожие отзывы (RAG)",     sub: "поиск по смыслу, не по слову",       tag: "RAG",       gen: ansRag,      preview: <PreviewDots /> },
+  { key: "top",      title: "Топ проблем и доли",     sub: "самые частые проблемы за период",   tag: "обзор",     message: "Покажи топ проблем в отзывах",                    preview: <PreviewBars keys={["size", "quality", "pack", "card"]} /> },
+  { key: "growth",   title: "Что выросло сейчас",      sub: "резкий рост к прошлому периоду",     tag: "алерт",     message: "Что сильнее всего выросло и почему? Объясни по отзывам", preview: <PreviewLine keyName="pack" /> },
+  { key: "dynamics", title: "Динамика негатива",       sub: "как менялась доля проблем по неделям", tag: "тренд",   message: "Покажи динамику проблем по неделям",              preview: <PreviewLine keyName="__neg" /> },
+  { key: "compare",  title: "Сравнение периодов",      sub: "этот период против прошлого",        tag: "сравнение", message: "Сравни этот период с прошлым по проблемам",       preview: <PreviewBars keys={["pack", "return", "quality", "size"]} signed /> },
+  { key: "products", title: "Топ товаров по проблеме", sub: "где проблема встречается чаще",       tag: "риск",      message: "Топ товаров с проблемой качества",                preview: <PreviewBars keys={["size", "quality", "pack", "return"]} /> },
+  { key: "quality",  title: "Разбор качества",         sub: "почему жалуются на брак/дефект",      tag: "разбор",    message: "Почему жалуются на качество товара? Разбери по отзывам", preview: <PreviewDots /> },
 ];
 
-export function ScenariosView({ onOpenChat }: { onOpenChat: (q?: string, ctx?: QueryCtx) => void }) {
+function Report({ scenario, onOpenChat }: { scenario: Scenario; onOpenChat: (q?: string) => void }) {
+  const [resp, setResp] = useState<AnswerResponse | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+    askChat(scenario.message)
+      .then((r) => { if (!cancelled) { setResp(r); setStatus("ready"); } })
+      .catch(() => { if (!cancelled) setStatus("error"); });
+    return () => { cancelled = true; };
+  }, [scenario.message]);
+
+  return (
+    <>
+      {status === "loading" && (
+        <div className="answer"><div className="lead"><p>Считаю по базе… <span className="typing"><i /><i /><i /></span></p></div></div>
+      )}
+      {status === "error" && (
+        <div className="answer"><div className="lead"><p>Не удалось построить отчёт. Проверьте бэкенд и попробуйте снова.</p></div></div>
+      )}
+      {status === "ready" && resp && <AnswerView resp={resp} />}
+      <div className="report-note">
+        Нужно копнуть глубже или спросить своими словами?
+        <button className="btn" onClick={() => onOpenChat(scenario.message)}>Открыть в чате</button>
+      </div>
+    </>
+  );
+}
+
+export function ScenariosView({ onOpenChat }: { onOpenChat: (q?: string) => void }) {
   const [selected, setSelected] = useState<Scenario | null>(null);
 
   if (selected) {
@@ -30,20 +58,16 @@ export function ScenariosView({ onOpenChat }: { onOpenChat: (q?: string, ctx?: Q
       <main className="dash">
         <div className="report-top">
           <button className="back" onClick={() => setSelected(null)}>← Сценарии</button>
-          <div className="t"><h2>{selected.title}</h2><div className="sub">{selected.sub} · период 04.08–20.10.2025</div></div>
+          <div className="t"><h2>{selected.title}</h2><div className="sub">{selected.sub}</div></div>
         </div>
-        <AnswerCard spec={selected.gen()} onAsk={(q, ctx) => onOpenChat(q, ctx)} />
-        <div className="report-note">
-          Нужно копнуть глубже или спросить своими словами?
-          <button className="btn" onClick={() => onOpenChat()}>Открыть в чате</button>
-        </div>
+        <Report scenario={selected} onOpenChat={onOpenChat} />
       </main>
     );
   }
 
   return (
     <main className="dash">
-      <div className="scen-head"><h2>Сценарии</h2><p className="note">Готовые отчёты в один клик. Нужен свободный вопрос своими словами — раздел «Чат».</p></div>
+      <div className="scen-head"><h2>Сценарии</h2><p className="note">Готовые отчёты в один клик — считаются по реальной базе. Нужен свободный вопрос — раздел «Чат».</p></div>
       <div className="scen-cards">
         {SCENARIOS.map((s) => (
           <button key={s.key} className="scard" onClick={() => { setSelected(s); window.scrollTo({ top: 0 }); }}>
