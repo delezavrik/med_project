@@ -116,3 +116,9 @@ class TemplateExecuteRequest(BaseModel):
 class ChatAskRequest(BaseModel):
     message: str
     force_answer_mode: Literal["template", "llm"] | None = None
+
+
+class DashboardRequest(BaseModel):
+    filters: ReviewFilters = Field(default_factory=ReviewFilters)
+    granularity: Literal["day", "week", "month"] = "week"
+    top_products_limit: int = Field(default=5, ge=1, le=20)

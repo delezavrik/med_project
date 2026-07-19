@@ -3,12 +3,19 @@ from fastapi import APIRouter, HTTPException
 from app.core.config import get_settings
 from app.core.db import get_pool
 from app.domain.labels import KNOWN_LABELS, POSITIVE_LABEL, PROBLEM_LABELS
-from app.schemas.query import AnswerResponse, ChatAskRequest, ParsedQuery, TemplateExecuteRequest
+from app.schemas.query import AnswerResponse, ChatAskRequest, DashboardRequest, ParsedQuery, TemplateExecuteRequest
+from app.services.dashboard_service import build_dashboard
 from app.services.query_service import QueryService
 from app.services.template_registry import list_templates
 
 router = APIRouter()
 service = QueryService()
+
+
+@router.post("/dashboard")
+def dashboard(request: DashboardRequest) -> dict:
+    """Агрегированный обзор для главного экрана (KPI, топ проблем, динамика, товары)."""
+    return build_dashboard(request)
 
 
 @router.get("/templates")
