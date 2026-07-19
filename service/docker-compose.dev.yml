@@ -5,10 +5,17 @@ services:
     container_name: reviews_service_api
     env_file:
       - ./backend/.env
+    environment:
+      # коллекция векторов bge-m3 (в .env лежит устаревшее reviews_embeddings)
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-wb_reviews_bge_m3}
+      # кэш модели bge-m3 на volume — 2.3 ГБ качаются один раз, не при каждом старте
+      HF_HOME: /app/.hf_cache
+      SENTENCE_TRANSFORMERS_HOME: /app/.hf_cache
     ports:
       - "8000:8000"
     volumes:
       - ./tests:/app/tests
+      - st_model_cache:/app/.hf_cache
     depends_on:
       - postgres
       - qdrant
@@ -42,3 +49,4 @@ services:
 volumes:
   reviews_postgres_data:
   reviews_qdrant_data:
+  st_model_cache:
